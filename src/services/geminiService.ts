@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { AnalysisResult } from "../types";
+import { AnalysisResult, AnalysisMode, Relationship } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
 
@@ -21,30 +21,41 @@ REGRAS:
 - Mantenha um tom encorajador e especialista.
 `;
 
-export enum AnalysisMode {
-  NORMAL = 'normal',
-  PICKUP = 'pickup',
-  RESCUE = 'rescue',
-  NAMES = 'names'
-}
-
 const MODE_INSTRUCTIONS: Record<AnalysisMode, string> = {
   [AnalysisMode.NORMAL]: 'Analise o interesse e sugira respostas estratégicas normais.',
   [AnalysisMode.PICKUP]: 'Gere cantadas criativas e personalizadas baseadas no contexto e nos interesses percebidos da pessoa no print.',
   [AnalysisMode.RESCUE]: 'O papo está esfriando. Sugira mensagens envolventes para reacender o interesse e mudar o rumo da conversa.',
   [AnalysisMode.NAMES]: 'Análise de compatibilidade de nomes. Faça uma análise lúdica, criativa e carismática. Use referências de cultura pop (casais famosos, filmes, músicas) e crie arquétipos de personalidade engraçados para os nomes (ex: "O casal vibe Golden Retriever", "Energia de filme Indie"). Se houver print, use-o para reforçar a análise.',
+  [AnalysisMode.SIMULATOR]: 'Você é um SIMULADOR DE PERSONALIDADE. Com base no nome, relação, estilo de escrita e personalidade fornecidos (e opcionalmente um print), tente responder como essa pessoa responderia. IMPORTANTE: Suas respostas devem vir com uma ressalva de que são previsões de probabilidade (~30%). Tente capturar gírias, pontuação e o "vibe" da pessoa.',
 };
 
 export async function analyzeConversation(
   imageBase64?: string | null, 
   mode: AnalysisMode = AnalysisMode.NORMAL,
-  extraData?: { names?: string }
+  extraData?: { names?: string, simulatorContext?: string, relationship?: Relationship }
 ): Promise<AnalysisResult> {
   try {
-    const promptText = extraData?.names 
-      ? `MODO ATUAL: ${MODE_INSTRUCTIONS[mode]}. NOMES FORNECIDOS: ${extraData.names}. Analise como esses nomes combinam${imageBase64 ? ' e também a conversa no print' : ''}.`
-      : `MODO ATUAL: ${MODE_INSTRUCTIONS[mode]}. Analise esta conversa e forneça uma análise detalhada e sugestões de resposta seguindo o formato JSON especificado.`;
-
+    let promptText = "";
+    const relText = extraData?.relationship ? `A RELAÇÃO entre vocês é: ${extraData.relationship}.` : "";
+    
+    if (mode === AnalysisMode.SIMULATOR) {
+      promptText = `MODO SIMULADOR DE IMPACTO. 
+      ${relText}
+      DADOS E CONTEXTO: ${extraData?.simulatorContext}. 
+      
+      TAREFAS:
+      1. Pegue a mensagem que o usuário deseja enviar (está no final de DADOS E CONTEXTO) e crie 3 versões MELHORES e MAIS EFICAZES para ELE enviar, baseadas no perfil da pessoa (coloque em 'suggestions').
+      2. Para CADA uma dessas 3 versões, simule qual seria o 'TALVEZ' (a provável resposta DELA/DELE) com 30% de precisão e coloque no campo 'simulatedResponse' dentro de cada sugestão.
+      3. No campo 'bestOption', faça um resumo de qual abordagem tem mais chance de sucesso geral.
+      4. No campo 'tone', descreva brevemente a vibe/personalidade da pessoa simulada.
+      
+      ${imageBase64 ? "Use o print para capturar gírias e o estilo de escrita exato dela na simulação." : ""}
+      `;
+    } else if (extraData?.names) {
+      promptText = `MODO ATUAL: ${MODE_INSTRUCTIONS[mode]}. ${relText} NOMES FORNECIDOS: ${extraData.names}. Analise como esses nomes combinam${imageBase64 ? ' e também a conversa no print' : ''}.`;
+    } else {
+      promptText = `MODO ATUAL: ${MODE_INSTRUCTIONS[mode]}. ${relText} Analise esta conversa e forneça uma análise detalhada e sugestões de resposta seguindo o formato JSON especificado.`;
+    }
     const parts: any[] = [{ text: promptText }];
     
     if (imageBase64) {
@@ -79,7 +90,8 @@ export async function analyzeConversation(
                 properties: {
                   text: { type: Type.STRING },
                   level: { type: Type.STRING, enum: ["leve", "médio", "ousado"] },
-                  explanation: { type: Type.STRING }
+                  explanation: { type: Type.STRING },
+                  simulatedResponse: { type: Type.STRING, description: "Uma provável resposta da pessoa a esta sugestão específica (usar apenas no modo simulador)" }
                 },
                 required: ["text", "level", "explanation"]
               }

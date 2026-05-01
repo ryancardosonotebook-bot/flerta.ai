@@ -3,15 +3,24 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, MessageSquare, History, ShieldCheck, Zap, RefreshCw, Heart } from 'lucide-react';
 import ImageUploader from './components/ImageUploader';
 import AnalysisDisplay from './components/AnalysisDisplay';
-import { analyzeConversation, AnalysisMode } from './services/geminiService';
-import { AnalysisResult } from './types';
+import { analyzeConversation } from './services/geminiService';
+import { AnalysisResult, AnalysisMode, Relationship } from './types';
+import { Users, AlertCircle } from 'lucide-react';
 
 export default function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<AnalysisMode>(AnalysisMode.NORMAL);
+  const [relationship, setRelationship] = useState<Relationship>('desconhecidos');
   const [names, setNames] = useState({ name1: '', name2: '' });
+  const [simulatorContext, setSimulatorContext] = useState({ 
+    name: '', 
+    relation: '', 
+    style: '',
+    personality: '',
+    message: ''
+  });
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const startAnalysis = async (image?: string | null) => {
@@ -19,9 +28,13 @@ export default function App() {
     setResult(null);
     setError(null);
     try {
-      const extraData = mode === AnalysisMode.NAMES && (names.name1 || names.name2) 
-        ? { names: `${names.name1} e ${names.name2}` } 
-        : undefined;
+      let extraData: any = { relationship };
+      
+      if (mode === AnalysisMode.NAMES && (names.name1 || names.name2)) {
+        extraData.names = `${names.name1} e ${names.name2}`;
+      } else if (mode === AnalysisMode.SIMULATOR) {
+        extraData.simulatorContext = `Nome: ${simulatorContext.name}, Relação: ${relationship}, Estilo de escrita: ${simulatorContext.style}, Personalidade: ${simulatorContext.personality}${simulatorContext.message ? `, Mensagem enviada pelo usuário: "${simulatorContext.message}"` : ''}`;
+      }
       
       const analysis = await analyzeConversation(image || selectedImage, mode, extraData);
       setResult(analysis);
@@ -78,66 +91,108 @@ export default function App() {
 
         {/* Feature Grid */}
         {!result && !isProcessing && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20 max-w-4xl mx-auto"
-          >
-            <div className="p-6 rounded-3xl bg-white/5 border border-white/10 group hover:bg-white/[0.08] transition-colors">
-              <MessageSquare className="w-6 h-6 text-purple-400 mb-4" />
-              <h3 className="font-semibold mb-2 text-white">Análise de Tom</h3>
-              <p className="text-sm text-zinc-500 leading-snug">Identificação automática do clima: romântico, frio, ou amigável.</p>
-            </div>
-            <div className="p-6 rounded-3xl bg-white/5 border border-white/10 group hover:bg-white/[0.08] transition-colors">
-              <History className="w-6 h-6 text-pink-400 mb-4" />
-              <h3 className="font-semibold mb-2 text-white">Resgate</h3>
-              <p className="text-sm text-zinc-500 leading-snug">Se o papo esfriou, sugerimos ganchos criativos para reviver o interesse.</p>
-            </div>
-            <div className="p-6 rounded-3xl bg-white/5 border border-white/10 group hover:bg-white/[0.08] transition-colors">
-              <ShieldCheck className="w-6 h-6 text-blue-400 mb-4" />
-              <h3 className="font-semibold mb-2 text-white">Respeito & Charme</h3>
-              <p className="text-sm text-zinc-500 leading-snug">Respostas que priorizam a autenticidade e o conforto de ambos.</p>
-            </div>
-          </motion.div>
+          <div className="space-y-12">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto"
+            >
+              {/* Feature Cards ... kept same ... */}
+              <div className="p-6 rounded-3xl bg-white/5 border border-white/10 group hover:bg-white/[0.08] transition-colors">
+                <MessageSquare className="w-6 h-6 text-purple-400 mb-4" />
+                <h3 className="font-semibold mb-2 text-white">Análise de Tom</h3>
+                <p className="text-sm text-zinc-500 leading-snug">Identificação automática do clima: romântico, frio, ou amigável.</p>
+              </div>
+              <div className="p-6 rounded-3xl bg-white/5 border border-white/10 group hover:bg-white/[0.08] transition-colors">
+                <History className="w-6 h-6 text-pink-400 mb-4" />
+                <h3 className="font-semibold mb-2 text-white">Resgate</h3>
+                <p className="text-sm text-zinc-500 leading-snug">Se o papo esfriou, sugerimos ganchos criativos para reviver o interesse.</p>
+              </div>
+              <div className="p-6 rounded-3xl bg-white/5 border border-white/10 group hover:bg-white/[0.08] transition-colors">
+                <ShieldCheck className="w-6 h-6 text-blue-400 mb-4" />
+                <h3 className="font-semibold mb-2 text-white">Respeito & Charme</h3>
+                <p className="text-sm text-zinc-500 leading-snug">Respostas que priorizam a autenticidade e o conforto de ambos.</p>
+              </div>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="max-w-2xl mx-auto p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 flex gap-3 items-start"
+            >
+              <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-200/70 leading-relaxed text-left">
+                <strong>Aviso:</strong> As sugestões de IA são baseadas em padrões estatísticos e nem sempre garantem o sucesso. Relacionamentos humanos são complexos; use sua intuição e seja autêntico acima de tudo.
+              </p>
+            </motion.div>
+          </div>
         )}
 
         {/* Interaction Section */}
         <section className="mb-20 space-y-10">
-          <div className="flex flex-wrap items-center justify-center gap-4 max-w-2xl mx-auto p-2 bg-white/5 border border-white/10 rounded-3xl">
-            <button
-              onClick={() => setMode(AnalysisMode.NORMAL)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all ${mode === AnalysisMode.NORMAL ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span className="text-sm font-medium">Análise</span>
-            </button>
-            <button
-              onClick={() => setMode(AnalysisMode.PICKUP)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all ${mode === AnalysisMode.PICKUP ? 'bg-pink-600 text-white shadow-lg shadow-pink-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
-            >
-              <Zap className="w-4 h-4" />
-              <span className="text-sm font-medium">Cantadas</span>
-            </button>
-            <button
-              onClick={() => setMode(AnalysisMode.RESCUE)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all ${mode === AnalysisMode.RESCUE ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span className="text-sm font-medium">Resgate</span>
-            </button>
-            <button
-              onClick={() => setMode(AnalysisMode.NAMES)}
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all ${mode === AnalysisMode.NAMES ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
-            >
-              <Heart className="w-4 h-4" />
-              <span className="text-sm font-medium">Nomes</span>
-            </button>
+          <div className="flex flex-col items-center gap-8">
+            <div className="flex flex-wrap items-center justify-center gap-4 max-w-2xl mx-auto p-2 bg-white/5 border border-white/10 rounded-3xl">
+              <button
+                onClick={() => setMode(AnalysisMode.NORMAL)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all ${mode === AnalysisMode.NORMAL ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span className="text-sm font-medium">Análise</span>
+              </button>
+              <button
+                onClick={() => setMode(AnalysisMode.PICKUP)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all ${mode === AnalysisMode.PICKUP ? 'bg-pink-600 text-white shadow-lg shadow-pink-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+              >
+                <Zap className="w-4 h-4" />
+                <span className="text-sm font-medium">Cantadas</span>
+              </button>
+              <button
+                onClick={() => setMode(AnalysisMode.RESCUE)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all ${mode === AnalysisMode.RESCUE ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="text-sm font-medium">Resgate</span>
+              </button>
+              <button
+                onClick={() => setMode(AnalysisMode.NAMES)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all ${mode === AnalysisMode.NAMES ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+              >
+                <Heart className="w-4 h-4" />
+                <span className="text-sm font-medium">Nomes</span>
+              </button>
+              <button
+                onClick={() => setMode(AnalysisMode.SIMULATOR)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all ${mode === AnalysisMode.SIMULATOR ? 'bg-red-600 text-white shadow-lg shadow-red-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span className="text-sm font-medium">Simulador</span>
+              </button>
+            </div>
+
+            <div className="flex flex-col items-center gap-4 w-full max-w-xl">
+              <label className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                <Users className="w-3 h-3" /> Sua relação com ela/ele:
+              </label>
+              <div className="flex flex-wrap justify-center gap-2 p-1 bg-white/5 border border-white/10 rounded-2xl w-full">
+                {['desconhecidos', 'amigos', 'namorados', 'casados', 'ex', 'você gosta dela', 'ela gosta de você', 'vocês dois se gostam'].map((rel) => (
+                  <button
+                    key={rel}
+                    onClick={() => setRelationship(rel as Relationship)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all capitalize ${relationship === rel ? 'bg-white/10 text-white border border-white/20' : 'text-zinc-500 hover:text-zinc-300'}`}
+                  >
+                    {rel}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <AnimatePresence mode="wait">
             {mode === AnalysisMode.NAMES && (
               <motion.div 
+                key="names-mode"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -169,9 +224,91 @@ export default function App() {
                   ) : <Heart className="w-5 h-5" />}
                   Analisar Nomes
                 </button>
-                <p className="text-center text-xs text-zinc-500 italic">
-                  Opcional: Mande um print abaixo para uma análise ainda mais profunda!
-                </p>
+              </motion.div>
+            )}
+
+            {mode === AnalysisMode.SIMULATOR && (
+              <motion.div 
+                key="simulator-mode"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="max-w-2xl mx-auto flex flex-col gap-6 p-8 bg-white/5 border border-white/10 rounded-[32px] shadow-2xl relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <MessageSquare className="w-24 h-24 text-red-500" />
+                </div>
+
+                <div className="space-y-4 relative z-10">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-red-400" /> 
+                    Configurar Simulador
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold ml-1">Nome da Pessoa</label>
+                      <input 
+                        type="text" 
+                        placeholder="Ex: Julia"
+                        value={simulatorContext.name}
+                        onChange={(e) => setSimulatorContext({...simulatorContext, name: e.target.value})}
+                        className="w-full px-5 py-4 bg-black/20 border border-white/10 rounded-2xl focus:outline-none focus:border-red-500/50 transition-colors text-white placeholder:text-zinc-700"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold ml-1">Estilo de Escrita</label>
+                      <input 
+                        type="text" 
+                        placeholder="Ex: abrevia tudo, usa emojis"
+                        value={simulatorContext.style}
+                        onChange={(e) => setSimulatorContext({...simulatorContext, style: e.target.value})}
+                        className="w-full px-5 py-4 bg-black/20 border border-white/10 rounded-2xl focus:outline-none focus:border-red-500/50 transition-colors text-white placeholder:text-zinc-700"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold ml-1">Personalidade</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ex: sarcástica, tímida, super animada"
+                      value={simulatorContext.personality}
+                      onChange={(e) => setSimulatorContext({...simulatorContext, personality: e.target.value})}
+                      className="w-full px-5 py-4 bg-black/20 border border-white/10 rounded-2xl focus:outline-none focus:border-red-500/50 transition-colors text-white placeholder:text-zinc-700"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 pt-2">
+                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold ml-1">Sua Mensagem (O que você diria?)</label>
+                    <textarea 
+                      placeholder="Digite aqui o que você pretende enviar para ver como ela/ele reagiria..."
+                      value={simulatorContext.message}
+                      onChange={(e) => setSimulatorContext({...simulatorContext, message: e.target.value})}
+                      className="w-full px-5 py-4 bg-black/20 border border-white/10 rounded-2xl focus:outline-none focus:border-red-500/50 transition-colors text-white placeholder:text-zinc-700 min-h-[120px] resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/5 flex flex-col gap-4">
+                  <button
+                    onClick={() => startAnalysis(selectedImage)}
+                    disabled={isProcessing || (!simulatorContext.name && !selectedImage)}
+                    className="w-full py-5 rounded-2xl bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black uppercase tracking-widest transition-all shadow-xl shadow-red-500/20 flex items-center justify-center gap-3"
+                  >
+                    {isProcessing ? (
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Zap className="w-5 h-5" />
+                        Gerar Simulação (Prob. 30%)
+                      </>
+                    )}
+                  </button>
+                  <p className="text-center text-[10px] text-zinc-600 uppercase tracking-[0.2em] font-medium italic overflow-hidden whitespace-nowrap">
+                    A IA tentará mimetizar o comportamento com base nos dados fornecidos
+                  </p>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -204,7 +341,7 @@ export default function App() {
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <AnalysisDisplay result={result} />
+              <AnalysisDisplay result={result} mode={mode} />
             </motion.div>
           )}
         </AnimatePresence>
