@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, MessageSquare, History, ShieldCheck, Zap, RefreshCw, Heart } from 'lucide-react';
+import { Sparkles, MessageSquare, History, ShieldCheck, Zap, RefreshCw, Heart, Video, Globe } from 'lucide-react';
 import ImageUploader from './components/ImageUploader';
 import AnalysisDisplay from './components/AnalysisDisplay';
 import { analyzeConversation } from './services/geminiService';
@@ -21,6 +21,7 @@ export default function App() {
     personality: '',
     message: ''
   });
+  const [profileInfo, setProfileInfo] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const startAnalysis = async (image?: string | null) => {
@@ -34,6 +35,8 @@ export default function App() {
         extraData.names = `${names.name1} e ${names.name2}`;
       } else if (mode === AnalysisMode.SIMULATOR) {
         extraData.simulatorContext = `Nome: ${simulatorContext.name}, Relação: ${relationship}, Estilo de escrita: ${simulatorContext.style}, Personalidade: ${simulatorContext.personality}${simulatorContext.message ? `, Mensagem enviada pelo usuário: "${simulatorContext.message}"` : ''}`;
+      } else if (mode === AnalysisMode.PROFILE_ANALYSIS) {
+        extraData.profileInfo = profileInfo;
       }
       
       const analysis = await analyzeConversation(image || selectedImage, mode, extraData);
@@ -169,6 +172,20 @@ export default function App() {
                 <ShieldCheck className="w-4 h-4" />
                 <span className="text-sm font-medium">Simulador</span>
               </button>
+              <button
+                onClick={() => setMode(AnalysisMode.CALL_ADVICE)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all ${mode === AnalysisMode.CALL_ADVICE ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+              >
+                <Video className="w-4 h-4" />
+                <span className="text-sm font-medium">Chamada</span>
+              </button>
+              <button
+                onClick={() => setMode(AnalysisMode.PROFILE_ANALYSIS)}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl transition-all ${mode === AnalysisMode.PROFILE_ANALYSIS ? 'bg-green-600 text-white shadow-lg shadow-green-500/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+              >
+                <Globe className="w-4 h-4" />
+                <span className="text-sm font-medium">Perfil</span>
+              </button>
             </div>
 
             <div className="flex flex-col items-center gap-4 w-full max-w-xl">
@@ -223,6 +240,60 @@ export default function App() {
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : <Heart className="w-5 h-5" />}
                   Analisar Nomes
+                </button>
+              </motion.div>
+            )}
+
+            {mode === AnalysisMode.PROFILE_ANALYSIS && (
+              <motion.div 
+                key="profile-analysis-mode"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="max-w-2xl mx-auto flex flex-col gap-4 px-4"
+              >
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold ml-1">Info do Perfil (Link ou Bio)</label>
+                  <textarea 
+                    placeholder="Cole aqui o link do Instagram/Twitter ou a bio da pessoa..."
+                    value={profileInfo}
+                    onChange={(e) => setProfileInfo(e.target.value)}
+                    className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:border-green-500/50 transition-colors text-white placeholder:text-zinc-700 min-h-[100px] resize-none"
+                  />
+                </div>
+                <button
+                  onClick={() => startAnalysis(selectedImage)}
+                  disabled={isProcessing || !profileInfo}
+                  className="w-full py-4 rounded-2xl bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold transition-all shadow-lg shadow-green-500/20 flex items-center justify-center gap-2"
+                >
+                  {isProcessing ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : <Globe className="w-5 h-5" />}
+                  Analisar Perfil
+                </button>
+              </motion.div>
+            )}
+
+            {mode === AnalysisMode.CALL_ADVICE && (
+              <motion.div 
+                key="call-advice-mode"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="max-w-xl mx-auto p-8 bg-blue-500/5 border border-blue-500/20 rounded-[32px] text-center"
+              >
+                <Video className="w-12 h-12 text-blue-400 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-white mb-2">Preparação para Chamada</h3>
+                <p className="text-zinc-400 text-sm mb-6">
+                  Mande um print da pessoa ou da conversa para receber dicas personalizadas de voz e postura.
+                </p>
+                <button
+                  onClick={() => startAnalysis(selectedImage)}
+                  disabled={isProcessing}
+                  className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold transition-all flex items-center justify-center gap-2"
+                >
+                  {isProcessing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Star className="w-5 h-5" />}
+                  Gerar Conselhos de Chamada
                 </button>
               </motion.div>
             )}

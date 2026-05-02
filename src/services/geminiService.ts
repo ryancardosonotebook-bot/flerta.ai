@@ -27,12 +27,14 @@ const MODE_INSTRUCTIONS: Record<AnalysisMode, string> = {
   [AnalysisMode.RESCUE]: 'O papo está esfriando. Sugira mensagens envolventes para reacender o interesse e mudar o rumo da conversa.',
   [AnalysisMode.NAMES]: 'Análise de compatibilidade de nomes. Faça uma análise lúdica, criativa e carismática. Use referências de cultura pop (casais famosos, filmes, músicas) e crie arquétipos de personalidade engraçados para os nomes (ex: "O casal vibe Golden Retriever", "Energia de filme Indie"). Se houver print, use-o para reforçar a análise.',
   [AnalysisMode.SIMULATOR]: 'Você é um SIMULADOR DE PERSONALIDADE. Com base no nome, relação, estilo de escrita e personalidade fornecidos (e opcionalmente um print), tente responder como essa pessoa responderia. IMPORTANTE: Suas respostas devem vir com uma ressalva de que são previsões de probabilidade (~30%). Tente capturar gírias, pontuação e o "vibe" da pessoa.',
+  [AnalysisMode.CALL_ADVICE]: 'Você é um COACH DE LINGUAGEM CORPORAL E TOM DE VOZ. Forneça conselhos para chamadas de vídeo ou áudio. Foque em: contato visual, gesticulação, modulação de voz, confiança e como transmitir calor humano. Se houver um print da pessoa ou da conversa, use para dar dicas específicas.',
+  [AnalysisMode.PROFILE_ANALYSIS]: 'Você é um ANALISTA DE PERFIL DE REDES SOCIAIS. Com base nos links, bio ou informações fornecidas, identifique interesses, traços de personalidade e estilo de comunicação. Sugira 3 quebra-gelos (icebreakers) ou perguntas magnéticas baseadas nessas descobertas.',
 };
 
 export async function analyzeConversation(
   imageBase64?: string | null, 
   mode: AnalysisMode = AnalysisMode.NORMAL,
-  extraData?: { names?: string, simulatorContext?: string, relationship?: Relationship }
+  extraData?: { names?: string, simulatorContext?: string, relationship?: Relationship, profileInfo?: string }
 ): Promise<AnalysisResult> {
   try {
     let promptText = "";
@@ -45,12 +47,26 @@ export async function analyzeConversation(
       
       TAREFAS:
       1. Pegue a mensagem que o usuário deseja enviar (está no final de DADOS E CONTEXTO) e crie 3 versões MELHORES e MAIS EFICAZES para ELE enviar, baseadas no perfil da pessoa (coloque em 'suggestions').
-      2. Para CADA uma dessas 3 versões, simule qual seria o 'TALVEZ' (a provável resposta DELA/DELE) com 30% de precisão e coloque no campo 'simulatedResponse' dentro de cada sugestão.
+      2. Para CADA uma dessas 3 versions, simule qual seria o 'TALVEZ' (a provável resposta DELA/DELE) com 30% de precisão e coloque no campo 'simulatedResponse' dentro de cada sugestão.
       3. No campo 'bestOption', faça um resumo de qual abordagem tem mais chance de sucesso geral.
       4. No campo 'tone', descreva brevemente a vibe/personalidade da pessoa simulada.
       
       ${imageBase64 ? "Use o print para capturar gírias e o estilo de escrita exato dela na simulação." : ""}
       `;
+    } else if (mode === AnalysisMode.CALL_ADVICE) {
+      promptText = `MODO CONSELHO DE CHAMADA (AUDIO/VÍDEO). 
+      ${relText}
+      Forneça dicas práticas de linguagem corporal e voz. 
+      Nas suggestions, coloque 3 dicas principais sobre: 1. Presença visual (se vídeo), 2. Tom de voz, 3. Atitude.
+      Na 'bestOption', dê um "Mantra" de confiança para o usuário repetir.
+      No 'tone', descreva a energia ideal para a chamada.`;
+    } else if (mode === AnalysisMode.PROFILE_ANALYSIS) {
+      promptText = `MODO ANÁLISE DE PERFIL. 
+      INFO DO PERFIL: ${extraData?.profileInfo}.
+      Identifique interesses e estilo. 
+      Nas suggestions, crie 3 abridores de conversa baseados no perfil.
+      Na 'bestOption', defina o "Arquétipo" da pessoa (ex: "A Aventureira Intelectual").
+      No 'tone', descreva como deve ser a abordagem ideal.`;
     } else if (extraData?.names) {
       promptText = `MODO ATUAL: ${MODE_INSTRUCTIONS[mode]}. ${relText} NOMES FORNECIDOS: ${extraData.names}. Analise como esses nomes combinam${imageBase64 ? ' e também a conversa no print' : ''}.`;
     } else {

@@ -3,7 +3,9 @@ export enum AnalysisMode {
   PICKUP = 'pickup',
   RESCUE = 'rescue',
   NAMES = 'names',
-  SIMULATOR = 'simulator'
+  SIMULATOR = 'simulator',
+  CALL_ADVICE = 'call_advice',
+  PROFILE_ANALYSIS = 'profile_analysis'
 }
 
 export type Relationship = 'amigos' | 'namorados' | 'casados' | 'ex' | 'você gosta dela' | 'ela gosta de você' | 'vocês dois se gostam' | 'desconhecidos';
